@@ -13,6 +13,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:#7ec8ff;font-family:var(--font);user-select:none;-webkit-user-select:none}
 #c{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+body.aiming #c{cursor:none}
 [hidden]{display:none!important}
 
 /* ---------- screens ---------- */
@@ -62,6 +63,16 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
 @keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}22%{transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
 .floater{position:absolute;left:0;top:0;font-size:26px;text-shadow:2px 2px 0 #1d3557;white-space:nowrap}
 #chint{position:absolute;left:16px;bottom:16px;font-size:12px;opacity:.75;font-weight:600}
+#reticle{position:fixed;left:0;top:0;width:64px;height:64px;margin:-32px 0 0 -32px;pointer-events:none;z-index:15;display:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+#reticle.on{display:block}
+#reticle svg{width:100%;height:100%;transition:transform .12s}
+#reticle .fg{stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round}
+#reticle .bg{stroke:#1d3557;fill:none;stroke-width:6;stroke-linecap:round}
+#reticle .dot{fill:#ffd93d;stroke:#1d3557;stroke-width:2}
+#reticle.lock .fg{stroke:#ff595e}
+#reticle.lock svg{transform:scale(.82) rotate(45deg)}
+#reticle.fire svg{transform:scale(1.15)}
+#reticle.lock.fire svg{transform:scale(.95) rotate(45deg)}
 #pause .panel h1{font-size:44px}
 /* ---------- touch controls ---------- */
 #touchui{position:absolute;inset:0;display:none}
@@ -87,6 +98,7 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
   <div id="banner"></div>
   <div id="floaters"></div>
   <div id="chint"></div>
+  <div id="reticle"><svg viewBox="0 0 64 64"><g class="bg"><circle cx="32" cy="32" r="20"/><path d="M32 4v12M32 48v12M4 32h12M48 32h12"/></g><g class="fg"><circle cx="32" cy="32" r="20"/><path d="M32 4v12M32 48v12M4 32h12M48 32h12"/></g><circle class="dot" cx="32" cy="32" r="3.5"/></svg></div>
   <div id="touchui"><div id="joy"><div id="knob"></div></div><div class="tbtn" id="dashBtn">DASH</div><div class="tbtn" id="pauseBtn">&#10074;&#10074;</div></div>
 </div>
 
@@ -400,6 +412,23 @@ const bots = [], bullets = [], particles = [], pickups = [], floaters = [];
 const keys = new Set();
 let firing = false, wantDash = false, mouseSeen = false;
 const mouseNDC = new THREE.Vector2();
+const mousePx = { x:-100, y:-100 };
+const _rp = new THREE.Vector3();
+function updateReticle(){
+  const on = G.running && !G.paused && !touchMode && mouseSeen;
+  document.body.classList.toggle('aiming', on);
+  const r = $('reticle'); r.classList.toggle('on', on);
+  if (!on) return;
+  r.style.transform = `translate(${mousePx.x}px,${mousePx.y}px)`;
+  let lock = false;
+  for (const bot of bots){
+    if (bot.state !== 'alive') continue;
+    const p = bot.ch.group.position; _rp.set(p.x, 1.6, p.z).project(camera);
+    const sx = (_rp.x*0.5+0.5)*innerWidth, sy = (-_rp.y*0.5+0.5)*innerHeight;
+    if (Math.hypot(sx-mousePx.x, sy-mousePx.y) < 48){ lock = true; break; }
+  }
+  r.classList.toggle('lock', lock); r.classList.toggle('fire', firing);
+}
 const raycaster = new THREE.Raycaster();
 const aimPlane = new THREE.Plane(new THREE.Vector3(0,1,0), -1.2);
 const aimPoint = new THREE.Vector3();
@@ -807,7 +836,7 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Space') firing = false; });
 window.addEventListener('blur', () => { keys.clear(); firing = false; });
-window.addEventListener('mousemove', e => { mouseSeen = true; mouseNDC.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1); });
+window.addEventListener('mousemove', e => { mouseSeen = true; mouseNDC.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1); mousePx.x = e.clientX; mousePx.y = e.clientY; });
 canvas.addEventListener('mousedown', e => { if (e.button === 0){ firing = true; initAudio(); } });
 window.addEventListener('mouseup', () => { firing = false; });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -865,7 +894,7 @@ function loop(now){
   const dt = Math.min(0.05, (now - last)/1000); last = now;
   if (G.running && !G.paused) update(dt);
   else { animateChar(player.ch, now/1000*2, 0.15, true); player.ch.group.rotation.y = now/1000*0.6; }
-  updateCamera(dt); updateFloaters(dt);
+  updateCamera(dt); updateFloaters(dt); updateReticle();
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
