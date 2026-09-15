@@ -436,7 +436,8 @@ function spawnBot(wordIdx, correct){
   ch.group.position.set(x,0,z); ch.group.scale.setScalar(0.01); scene.add(ch.group);
   const text = VOCAB[wordIdx][MODES[G.mode].answer];
   const sign = makeSign(text, pick(SIGN_COLORS)); ch.group.add(sign);
-  bots.push({ ch, sign, text, wordIdx, correct, state:'alive', scale:0.01, stun:0, vx:0, vz:0,
+  const pole = new THREE.Mesh(new THREE.BoxGeometry(0.1,1,0.1), new THREE.MeshBasicMaterial({color:0x1d3557})); pole.visible = false; ch.group.add(pole);
+  bots.push({ ch, sign, pole, lift:0, text, wordIdx, correct, state:'alive', scale:0.01, stun:0, vx:0, vz:0,
               speed: (DIFF[G.diff].speed + Math.min(2.4, G.waveNum*0.08)) * rand(0.9,1.1), phase: rand(0,6.28) });
   spawnPuff(x, 1, z, 0xffffff, 8);
 }
@@ -632,7 +633,37 @@ function updateBots(dt){
   for (let i=0;i<bots.length;i++) for (let j=i+1;j<bots.length;j++){
     const a = bots[i].ch.group.position, b = bots[j].ch.group.position;
     const dx = b.x-a.x, dz = b.z-a.z, d = Math.hypot(dx,dz);
-    if (d < 2.2 && d > 0.001){ const push = (2.2-d)/2*0.5; a.x -= dx/d*push; a.z -= dz/d*push; b.x += dx/d*push; b.z += dz/d*push; }
+    if (d < 3.4 && d > 0.001){ const push = (3.4-d)/2*0.5; a.x -= dx/d*push; a.z -= dz/d*push; b.x += dx/d*push; b.z += dz/d*push; }
+  }
+}
+// Lift word signs that overlap on screen so they stay readable when noobs bunch up.
+const SIGN_Y = 3.8, SIGN_HW = 2.6, SIGN_RATIO = 1.625/5.2;
+const _pc = new THREE.Vector3(), _pe = new THREE.Vector3();
+function updateSignLayout(dt){
+  const rects = [];
+  for (const bot of bots){
+    if (bot.state !== 'alive') continue;
+    const p = bot.ch.group.position, sy = SIGN_Y + bot.lift;
+    _pc.set(p.x, sy, p.z).project(camera); _pe.set(p.x + SIGN_HW, sy, p.z).project(camera);
+    const hw = Math.abs(_pe.x - _pc.x) * innerWidth / 2;
+    rects.push({ bot, x:_pc.x*innerWidth/2, y:-_pc.y*innerHeight/2, hw, hh:hw*SIGN_RATIO, need:false, tight:false });
+  }
+  rects.sort((a,b) => b.y - a.y);                 // nearest to camera first
+  for (let i=0;i<rects.length;i++) for (let j=i+1;j<rects.length;j++){
+    const a = rects[i], b = rects[j];
+    if (Math.abs(a.x-b.x) >= a.hw + b.hw) continue;
+    const gap = Math.abs(a.y-b.y) - (a.hh + b.hh);
+    if (gap < 4) b.need = true;                    // overlapping: push the farther sign up
+    if (gap < a.hh) b.tight = true;                // close: hold position (hysteresis)
+  }
+  for (const r of rects){
+    if (r.need) r.bot.lift = Math.min(7, r.bot.lift + 7*dt);
+    else if (!r.tight) r.bot.lift = Math.max(0, r.bot.lift - 3*dt);
+  }
+  for (const bot of bots){
+    const y = SIGN_Y + bot.lift; bot.sign.position.y = y;
+    const L = y - 0.85 - 2.9;
+    bot.pole.visible = L > 0.2; bot.pole.scale.y = Math.max(0.01, L); bot.pole.position.y = 2.9 + L/2;
   }
 }
 function updateAim(){
@@ -672,7 +703,7 @@ function update(dt){
 
   if (firing && player.fireCd <= 0){ fire(); player.fireCd = 0.26; }
 
-  updateBots(dt); updateBullets(dt); updateParticles(dt); updatePickups(dt);
+  updateBots(dt); updateBullets(dt); updateParticles(dt); updatePickups(dt); updateSignLayout(dt);
 
   if (G.state === 'transition'){ G.timer -= dt; if (G.timer <= 0) startWave(); }
 }
@@ -838,7 +869,7 @@ function loop(now){
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
-window.WB = { G, bots, player, hitBot, startWave, spawnPickup, endGame };   // debug hook
+window.WB = { G, bots, player, camera, hitBot, startWave, spawnPickup, endGame };   // debug hook
 })();
 </script>
 </body>
