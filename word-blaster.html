@@ -107,6 +107,8 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
     <div class="top"><div class="langs" id="langs"></div></div>
     <h1>WORD BLASTER</h1>
     <p class="sub" data-t="subtitle"></p>
+    <div class="label" data-t="set"></div>
+    <div class="row" id="sets"></div>
     <div class="label" data-t="mode"></div>
     <div class="row" id="modes"></div>
     <div class="label" data-t="diff"></div>
@@ -143,9 +145,21 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
 'use strict';
 
 // =====================================================================
-//  VOCABULARY  [German, English, Spanish]
+//  VOCABULARY SETS
+//  Each set: id (used for the saved records), name per UI language,
+//  langs = language of each column of `words`, modes = which columns are
+//  shown as the prompt and which column goes on the signs.
 // =====================================================================
-const VOCAB = [
+const SETS = [
+{ id:'en-2026-09-11',
+  name:{ es:'Inglés · 11.09', de:'Englisch · 11.09', en:'English · 11.09' },
+  langs:['de','en','es'],
+  modes:[
+    { prompt:[0,2], answer:1 },   // German + Spanish -> English
+    { prompt:[1],   answer:2 },   // English -> Spanish
+    { prompt:[1],   answer:0 },   // English -> German
+  ],
+  words:[
   ["gehörlos","deaf","sordo"],
   ["Hilfszentrum","support center","centro de ayuda"],
   ["Tanz / tanzen","dance","baile / bailar"],
@@ -178,14 +192,40 @@ const VOCAB = [
   ["ankommen","to arrive","llegar"],
   ["Reise","trip","viaje"],
   ["fliegen","to fly","volar"],
+  ] },
+{ id:'de-l37-38',
+  name:{ es:'Alemán · Lección 37+38', de:'Deutsch · Lektion 37+38', en:'German · Lesson 37+38' },
+  langs:['de','es'],
+  modes:[
+    { prompt:[0], answer:1 },     // German -> Spanish
+    { prompt:[1], answer:0 },     // Spanish -> German
+  ],
+  words:[
+  // Lektion 37 – Tipps zum Geburtstag
+  ["feiern","celebrar"],
+  ["der Eintritt, -e","la entrada"],
+  ["verschieden","diferente"],
+  ["echt","auténtico"],
+  ["plus","más"],
+  ["das Ticket, -s","el billete"],
+  ["das Thema, Themen","el tema"],
+  ["zuhören","escuchar"],
+  // Lektion 38 – Die Party-Vorbereitung
+  ["organisieren","organizar"],
+  ["vorbereiten","preparar"],
+  ["backen","hornear"],
+  ["rund","redondo"],
+  ["der Schirm, -e","el paraguas"],
+  ["der Sonnenschirm, -e","la sombrilla"],
+  ["der Apfelsaft, -¨e","el jugo de manzana"],
+  ["der Zucker (Sg.)","el azúcar"],
+  ["schneiden","cortar"],
+  ["stellen","colocar"],
+  ["vorgestern","anteayer"],
+  ["übermorgen","pasado mañana"],
+  ] },
 ];
 
-// prompt = language columns shown on screen, answer = column on the signs
-const MODES = [
-  { prompt:[0,2], answer:1 },   // German + Spanish -> English
-  { prompt:[1],   answer:2 },   // English -> Spanish
-  { prompt:[1],   answer:0 },   // English -> German
-];
 const DIFF = [
   { bots:3, speed:1.5, heartEvery:3 },
   { bots:4, speed:2.1, heartEvery:4 },
@@ -195,7 +235,7 @@ const MAX_HEARTS = 5;
 
 const UI = {
   es:{ subtitle:'¡Dispara a la palabra correcta antes de que los noobs te atrapen!',
-       mode:'Modo', modes:['Alemán + Español → Inglés','Inglés → Español','Inglés → Alemán'],
+       set:'Vocabulario', mode:'Modo', langs:{de:'Alemán',en:'Inglés',es:'Español'},
        diff:'Dificultad', diffs:['Fácil','Normal','Difícil'], play:'¡JUGAR!',
        controls:'WASD / flechas: moverse &nbsp;·&nbsp; Ratón: apuntar &nbsp;·&nbsp; Clic o Espacio: disparar<br>Shift: dash &nbsp;·&nbsp; P: pausa &nbsp;·&nbsp; M: sonido',
        find:'Busca la palabra', wave:'Ronda', left:'quedan', score:'Puntos', best:'Récord', accuracy:'Precisión',
@@ -205,7 +245,7 @@ const UI = {
        chint:'P: pausa · M: sonido',
        controlsTouch:'Mitad izquierda: joystick para moverse &nbsp;·&nbsp; Mitad derecha: toca para apuntar y disparar<br>Botón DASH: esquivar &nbsp;·&nbsp; ❚❚: pausa', resumeTouch:'Toca la pantalla para seguir' },
   de:{ subtitle:'Schieß auf das richtige Wort, bevor die Noobs dich erwischen!',
-       mode:'Modus', modes:['Deutsch + Spanisch → Englisch','Englisch → Spanisch','Englisch → Deutsch'],
+       set:'Vokabeln', mode:'Modus', langs:{de:'Deutsch',en:'Englisch',es:'Spanisch'},
        diff:'Schwierigkeit', diffs:['Leicht','Normal','Schwer'], play:'SPIELEN!',
        controls:'WASD / Pfeile: bewegen &nbsp;·&nbsp; Maus: zielen &nbsp;·&nbsp; Klick oder Leertaste: schießen<br>Shift: Dash &nbsp;·&nbsp; P: Pause &nbsp;·&nbsp; M: Ton',
        find:'Finde das Wort', wave:'Runde', left:'übrig', score:'Punkte', best:'Rekord', accuracy:'Trefferquote',
@@ -215,7 +255,7 @@ const UI = {
        chint:'P: Pause · M: Ton',
        controlsTouch:'Linke Hälfte: Joystick zum Bewegen &nbsp;·&nbsp; Rechte Hälfte: tippen zum Zielen und Schießen<br>DASH-Knopf: ausweichen &nbsp;·&nbsp; ❚❚: Pause', resumeTouch:'Tippe zum Weiterspielen' },
   en:{ subtitle:'Shoot the right word before the noobs catch you!',
-       mode:'Mode', modes:['German + Spanish → English','English → Spanish','English → German'],
+       set:'Vocabulary', mode:'Mode', langs:{de:'German',en:'English',es:'Spanish'},
        diff:'Difficulty', diffs:['Easy','Normal','Hard'], play:'PLAY!',
        controls:'WASD / arrows: move &nbsp;·&nbsp; Mouse: aim &nbsp;·&nbsp; Click or Space: shoot<br>Shift: dash &nbsp;·&nbsp; P: pause &nbsp;·&nbsp; M: sound',
        find:'Find the word', wave:'Wave', left:'left', score:'Score', best:'Best', accuracy:'Accuracy',
@@ -226,6 +266,11 @@ const UI = {
        controlsTouch:'Left half: joystick to move &nbsp;·&nbsp; Right half: tap to aim and shoot<br>DASH button: dodge &nbsp;·&nbsp; ❚❚: pause', resumeTouch:'Tap the screen to continue' },
 };
 let uiLang = 'es';
+let curSetIdx = 0;
+const curSet = () => SETS[curSetIdx];
+const VOCAB = () => curSet().words;
+const MODES = () => curSet().modes;
+const modeLabel = m => { const s = curSet(), L = T('langs'); return m.prompt.map(i => L[s.langs[i]]).join(' + ') + ' → ' + L[s.langs[m.answer]]; };
 const IS_TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
 let touchMode = IS_TOUCH;
 const T = k => (UI[uiLang][k] !== undefined ? UI[uiLang][k] : UI.en[k]);
@@ -446,11 +491,11 @@ function startWave(){
   if (G.queue.length === 0) { endGame(true); return; }
   G.state = 'wave'; G.waveNum++; G.wrongInWave = 0; G.requeued = false;
   G.current = G.queue.shift();
-  const w = VOCAB[G.current], mode = MODES[G.mode], d = DIFF[G.diff];
+  const V = VOCAB(), w = V[G.current], mode = MODES()[G.mode], d = DIFF[G.diff];
   $('pmain').textContent = w[mode.prompt[0]];
   $('psub').textContent = mode.prompt[1] !== undefined ? w[mode.prompt[1]] : '';
   const answer = w[mode.answer];
-  const others = shuffle(VOCAB.map((_,i)=>i).filter(i => i !== G.current && VOCAB[i][mode.answer] !== answer)).slice(0, d.bots-1);
+  const others = shuffle(V.map((_,i)=>i).filter(i => i !== G.current && V[i][mode.answer] !== answer)).slice(0, d.bots-1);
   shuffle([G.current, ...others]).forEach(i => spawnBot(i, i === G.current));
   if (G.waveNum % d.heartEvery === 0 && G.hearts < MAX_HEARTS && !pickups.some(p => p.type === 'heart')) spawnPickup('heart');
   updateHUD();
@@ -463,7 +508,7 @@ function spawnBot(wordIdx, correct){
   const ch = makeChar({head:pick([0xffd93d,0xffc98a,0xd9a066,0xb0e0ff]), torso:pick(pal), arms:pick(pal), legs:pick(pal)});
   ch.mouth.scale.set(1,1,1); ch.mouth.rotation.z = Math.PI;                       // grumpy
   ch.group.position.set(x,0,z); ch.group.scale.setScalar(0.01); scene.add(ch.group);
-  const text = VOCAB[wordIdx][MODES[G.mode].answer];
+  const text = VOCAB()[wordIdx][MODES()[G.mode].answer];
   const sign = makeSign(text, pick(SIGN_COLORS)); ch.group.add(sign);
   const pole = new THREE.Mesh(new THREE.BoxGeometry(0.1,1,0.1), new THREE.MeshBasicMaterial({color:0x1d3557})); pole.visible = false; ch.group.add(pole);
   bots.push({ ch, sign, pole, lift:0, text, wordIdx, correct, state:'alive', scale:0.01, stun:0, vx:0, vz:0,
@@ -474,7 +519,7 @@ function removeBot(bot){ scene.remove(bot.ch.group); disposeObj(bot.ch.group); b
 function hintOf(ans){ return ans.startsWith('to ') ? 'to ' + ans[3] + '…' : ans[0] + '…'; }
 
 function hitBot(bot, bx, bz){
-  const w = VOCAB[G.current], mode = MODES[G.mode];
+  const w = VOCAB()[G.current], mode = MODES()[G.mode];
   const p = bot.ch.group.position;
   if (bot.correct){
     G.correctCount++;
@@ -761,7 +806,7 @@ function updateHUD(){
   $('barfill').style.width = (total ? G.correctCount/total*100 : 0) + '%';
   $('chint').textContent = touchMode ? '' : T('chint');
 }
-function bestKey(){ return `wordblaster_best_${G.mode}_${G.diff}`; }
+function bestKey(){ return `wordblaster_best_${curSet().id}_${G.mode}_${G.diff}`; }
 function getBest(){ try { return +localStorage.getItem(bestKey()) || 0; } catch(e){ return 0; } }
 function setBest(v){ try { localStorage.setItem(bestKey(), v); } catch(e){} }
 
@@ -776,7 +821,7 @@ function startGame(){
   clearWorld();
   Object.assign(G, { running:true, paused:false, hearts:MAX_HEARTS, score:0, combo:1, waveNum:0, current:-1, wrongInWave:0,
                      correctCount:0, wrongCount:0, stats:{}, state:'idle', timer:0, coinTimer:5, shake:0 });
-  G.queue = shuffle(VOCAB.map((_,i)=>i));
+  G.queue = shuffle(VOCAB().map((_,i)=>i));
   Object.assign(player, { x:0, z:0, vx:0, vz:0, inv:0, dashT:0, dashCd:0, fireCd:0 });
   camPos.set(0,CAM_H,CAM_D);
   $('start').hidden = true; $('over').hidden = true; $('pause').hidden = true; $('hud').hidden = false;
@@ -793,7 +838,8 @@ function endGame(won){
   $('over-acc').textContent = (shots ? Math.round(G.correctCount/shots*100) : 100) + '%';
   const missed = Object.keys(G.stats).map(Number).sort((a,b) => G.stats[b]-G.stats[a]);
   $('review-label').textContent = missed.length ? T('review') : T('perfect');
-  $('review').innerHTML = missed.map(i => { const w = VOCAB[i]; return `<div class="chip">${esc(w[0])} → <b>${esc(w[1])}</b> → ${esc(w[2])}</div>`; }).join('');
+  const ansCol = MODES()[G.mode].answer;
+  $('review').innerHTML = missed.map(i => `<div class="chip">${VOCAB()[i].map((t,c) => c === ansCol ? `<b>${esc(t)}</b>` : esc(t)).join(' → ')}</div>`).join('');
   (won ? SFX.win : SFX.lose)();
   setTimeout(() => { $('hud').hidden = true; $('over').hidden = false; }, won ? 900 : 700);
 }
@@ -806,7 +852,8 @@ function togglePause(){
 function applyLang(){
   document.querySelectorAll('[data-t]').forEach(el => { const k = el.dataset.t; el.innerHTML = T(touchMode && UI.en[k + 'Touch'] ? k + 'Touch' : k); });
   $('touchui').classList.toggle('on', touchMode);
-  $('modes').innerHTML = T('modes').map((m,i) => `<button class="btn ${i===G.mode?'sel':''}" data-mode="${i}">${m}</button>`).join('');
+  $('sets').innerHTML = SETS.map((s,i) => `<button class="btn ${i===curSetIdx?'sel':''}" data-set="${i}">${esc(s.name[uiLang] || s.name.en)}</button>`).join('');
+  $('modes').innerHTML = MODES().map((m,i) => `<button class="btn ${i===G.mode?'sel':''}" data-mode="${i}">${esc(modeLabel(m))}</button>`).join('');
   $('diffs').innerHTML = T('diffs').map((m,i) => `<button class="btn ${i===G.diff?'sel':''}" data-diff="${i}">${m}</button>`).join('');
   $('langs').innerHTML = ['es','de','en'].map(l => `<button class="btn ${l===uiLang?'sel':''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
   document.documentElement.lang = uiLang;
@@ -814,7 +861,8 @@ function applyLang(){
 $('start').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   initAudio();
-  if (b.dataset.mode !== undefined){ G.mode = +b.dataset.mode; applyLang(); }
+  if (b.dataset.set !== undefined){ curSetIdx = +b.dataset.set; G.mode = 0; try { localStorage.setItem('wordblaster_set', curSet().id); } catch(e){} applyLang(); }
+  else if (b.dataset.mode !== undefined){ G.mode = +b.dataset.mode; applyLang(); }
   else if (b.dataset.diff !== undefined){ G.diff = +b.dataset.diff; applyLang(); }
   else if (b.dataset.lang){ uiLang = b.dataset.lang; try { localStorage.setItem('wordblaster_lang', uiLang); } catch(e){} applyLang(); }
   else if (b.id === 'play'){ startGame(); }
@@ -822,6 +870,7 @@ $('start').addEventListener('click', e => {
 $('again').addEventListener('click', () => { initAudio(); startGame(); });
 $('menu').addEventListener('click', () => { $('over').hidden = true; $('start').hidden = false; });
 try { const l = localStorage.getItem('wordblaster_lang'); if (l && UI[l]) uiLang = l; } catch(e){}
+try { const i = SETS.findIndex(s => s.id === localStorage.getItem('wordblaster_set')); if (i >= 0) curSetIdx = i; } catch(e){}
 applyLang();
 
 // ---------- input ----------
@@ -898,7 +947,7 @@ function loop(now){
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
-window.WB = { G, bots, player, camera, hitBot, startWave, spawnPickup, endGame };   // debug hook
+window.WB = { G, SETS, curSet, bots, player, camera, hitBot, startWave, spawnPickup, endGame };   // debug hook
 })();
 </script>
 </body>
