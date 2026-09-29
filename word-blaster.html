@@ -53,7 +53,13 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
 #find{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#a8dadc}
 #pmain{font-size:38px;line-height:1.1;color:#ffd93d;text-shadow:2px 2px 0 #000}
 #psub{font-size:20px;color:#fff;opacity:.95}
-#bottom{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:min(90vw,520px);text-align:center}
+#typebox{display:block;margin:8px auto 2px;width:min(80vw,360px);font:800 20px var(--font);color:#1d3557;background:#fff;border:3px solid #1d3557;border-radius:12px;padding:8px 12px;text-align:center;pointer-events:auto;user-select:text;-webkit-user-select:text;outline:none}
+#typebox:focus{box-shadow:0 0 0 3px #ffd93d}
+#typebox.shake{animation:shakeX .35s}
+@keyframes shakeX{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+body.typing #c{cursor:default}
+body.typing #dashBtn{display:none}
+#bottom{position:absolute;left:50%;bottom:calc(16px + var(--kbd,0px));transform:translateX(-50%);width:min(90vw,520px);text-align:center}
 #wave{font-size:16px;margin-bottom:6px}
 #bar{height:14px;background:rgba(255,255,255,.25);border-radius:8px;overflow:hidden;border:2px solid #fff}
 #barfill{height:100%;background:linear-gradient(90deg,#8ac926,#ffd93d);width:0;transition:width .4s}
@@ -62,7 +68,7 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
 #banner.good{color:#8ac926}#banner.bad{color:#ff595e}#banner.info{color:#fff}
 @keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}22%{transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
 .floater{position:absolute;left:0;top:0;font-size:26px;text-shadow:2px 2px 0 #1d3557;white-space:nowrap}
-#chint{position:absolute;left:16px;bottom:16px;font-size:12px;opacity:.75;font-weight:600}
+#chint{position:absolute;left:16px;bottom:calc(16px + var(--kbd,0px));font-size:12px;opacity:.75;font-weight:600}
 #reticle{position:fixed;left:0;top:0;width:64px;height:64px;margin:-32px 0 0 -32px;pointer-events:none;z-index:15;display:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
 #reticle.on{display:block}
 #reticle svg{width:100%;height:100%;transition:transform .12s}
@@ -93,7 +99,7 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
 <div id="hud" hidden>
   <div id="hearts" class="box"></div>
   <div id="topright" class="box"><div id="score">0</div><div id="combo"></div></div>
-  <div id="prompt" class="box"><div id="find"></div><div id="pmain"></div><div id="psub"></div></div>
+  <div id="prompt" class="box"><div id="find"></div><div id="pmain"></div><div id="psub"></div><input id="typebox" type="text" hidden autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"></div>
   <div id="bottom"><div id="wave"></div><div id="bar"><div id="barfill"></div></div></div>
   <div id="banner"></div>
   <div id="floaters"></div>
@@ -111,6 +117,8 @@ h1{font-size:58px;line-height:1;margin:0 0 4px;color:#e63946;letter-spacing:2px;
     <div class="row" id="sets"></div>
     <div class="label" data-t="mode"></div>
     <div class="row" id="modes"></div>
+    <div class="label" data-t="playStyle"></div>
+    <div class="row" id="plays"></div>
     <div class="label" data-t="diff"></div>
     <div class="row" id="diffs"></div>
     <button class="btn big" id="play" data-t="play"></button>
@@ -314,7 +322,12 @@ const UI = {
        gameover:'GAME OVER', victory:'¡VICTORIA!', review:'Palabras para repasar', perfect:'¡Todas perfectas! 🏆',
        again:'Otra vez', quit:'Menú', paused:'PAUSA', resume:'Pulsa P para seguir', heart:'+1 vida', words:'palabras',
        chint:'P: pausa · M: sonido',
-       controlsTouch:'Mitad izquierda: joystick para moverse &nbsp;·&nbsp; Mitad derecha: toca para apuntar y disparar<br>Botón DASH: esquivar &nbsp;·&nbsp; ❚❚: pausa', resumeTouch:'Toca la pantalla para seguir' },
+       controlsTouch:'Mitad izquierda: joystick para moverse &nbsp;·&nbsp; Mitad derecha: toca para apuntar y disparar<br>Botón DASH: esquivar &nbsp;·&nbsp; ❚❚: pausa', resumeTouch:'Toca la pantalla para seguir',
+       playStyle:'Estilo de juego', plays:['🔫 Disparar','⌨️ Escribir'], typeFind:'Escribe la palabra', placeholder:'escribe la traducción…',
+       controlsType:'Escribe la traducción + Enter &nbsp;·&nbsp; Flechas: moverse &nbsp;·&nbsp; Esc: pausa',
+       controlsTypeTouch:'Mitad izquierda: joystick para moverse &nbsp;·&nbsp; Toca la casilla para escribir &nbsp;·&nbsp; ❚❚: pausa',
+       chintType:'Esc: pausa', resumeType:'Pulsa Esc para seguir', resumeTypeTouch:'Toca la pantalla para seguir',
+       wrong2Type:'¡Escribe el cartel verde!', typo:'Eso no está en ningún cartel' },
   de:{ subtitle:'Schieß auf das richtige Wort, bevor die Noobs dich erwischen!',
        set:'Vokabeln', mode:'Modus', langs:{de:'Deutsch',en:'Englisch',es:'Spanisch'},
        diff:'Schwierigkeit', diffs:['Leicht','Normal','Schwer'], play:'SPIELEN!',
@@ -324,7 +337,12 @@ const UI = {
        gameover:'GAME OVER', victory:'SIEG!', review:'Wörter zum Wiederholen', perfect:'Alles richtig! 🏆',
        again:'Nochmal', quit:'Menü', paused:'PAUSE', resume:'Drück P zum Weiterspielen', heart:'+1 Leben', words:'Wörter',
        chint:'P: Pause · M: Ton',
-       controlsTouch:'Linke Hälfte: Joystick zum Bewegen &nbsp;·&nbsp; Rechte Hälfte: tippen zum Zielen und Schießen<br>DASH-Knopf: ausweichen &nbsp;·&nbsp; ❚❚: Pause', resumeTouch:'Tippe zum Weiterspielen' },
+       controlsTouch:'Linke Hälfte: Joystick zum Bewegen &nbsp;·&nbsp; Rechte Hälfte: tippen zum Zielen und Schießen<br>DASH-Knopf: ausweichen &nbsp;·&nbsp; ❚❚: Pause', resumeTouch:'Tippe zum Weiterspielen',
+       playStyle:'Spielart', plays:['🔫 Schießen','⌨️ Schreiben'], typeFind:'Schreib das Wort', placeholder:'Übersetzung eingeben…',
+       controlsType:'Übersetzung eingeben + Enter &nbsp;·&nbsp; Pfeile: bewegen &nbsp;·&nbsp; Esc: Pause',
+       controlsTypeTouch:'Linke Hälfte: Joystick zum Bewegen &nbsp;·&nbsp; Tippe auf das Feld zum Schreiben &nbsp;·&nbsp; ❚❚: Pause',
+       chintType:'Esc: Pause', resumeType:'Drück Esc zum Weiterspielen', resumeTypeTouch:'Tippe zum Weiterspielen',
+       wrong2Type:'Schreib das grüne Schild!', typo:'Das steht auf keinem Schild' },
   en:{ subtitle:'Shoot the right word before the noobs catch you!',
        set:'Vocabulary', mode:'Mode', langs:{de:'German',en:'English',es:'Spanish'},
        diff:'Difficulty', diffs:['Easy','Normal','Hard'], play:'PLAY!',
@@ -334,7 +352,12 @@ const UI = {
        gameover:'GAME OVER', victory:'VICTORY!', review:'Words to review', perfect:'All perfect! 🏆',
        again:'Play again', quit:'Menu', paused:'PAUSED', resume:'Press P to continue', heart:'+1 life', words:'words',
        chint:'P: pause · M: sound',
-       controlsTouch:'Left half: joystick to move &nbsp;·&nbsp; Right half: tap to aim and shoot<br>DASH button: dodge &nbsp;·&nbsp; ❚❚: pause', resumeTouch:'Tap the screen to continue' },
+       controlsTouch:'Left half: joystick to move &nbsp;·&nbsp; Right half: tap to aim and shoot<br>DASH button: dodge &nbsp;·&nbsp; ❚❚: pause', resumeTouch:'Tap the screen to continue',
+       playStyle:'Play style', plays:['🔫 Shoot','⌨️ Type'], typeFind:'Type the word', placeholder:'type the translation…',
+       controlsType:'Type the translation + Enter &nbsp;·&nbsp; Arrows: move &nbsp;·&nbsp; Esc: pause',
+       controlsTypeTouch:'Left half: joystick to move &nbsp;·&nbsp; Tap the box to type &nbsp;·&nbsp; ❚❚: pause',
+       chintType:'Esc: pause', resumeType:'Press Esc to continue', resumeTypeTouch:'Tap the screen to continue',
+       wrong2Type:'Type the green sign!', typo:'Not on any sign' },
 };
 let uiLang = 'es';
 let curSetIdx = 0;
@@ -521,7 +544,7 @@ player.ch = makeChar({head:0xffd93d, torso:0x1982c4, arms:0xffd93d, legs:0x8ac92
 scene.add(player.ch.group);
 
 // ---------- game state ----------
-const G = { running:false, paused:false, mode:0, diff:1, hearts:MAX_HEARTS, score:0, combo:1, waveNum:0,
+const G = { running:false, paused:false, mode:0, diff:1, play:'shoot', hearts:MAX_HEARTS, score:0, combo:1, waveNum:0,
             queue:[], current:-1, wrongInWave:0, requeued:false, correctCount:0, wrongCount:0, stats:{},
             state:'idle', timer:0, coinTimer:6, shake:0, time:0 };
 const bots = [], bullets = [], particles = [], pickups = [], floaters = [];
@@ -531,7 +554,7 @@ const mouseNDC = new THREE.Vector2();
 const mousePx = { x:-100, y:-100 };
 const _rp = new THREE.Vector3();
 function updateReticle(){
-  const on = G.running && !G.paused && !touchMode && mouseSeen;
+  const on = G.running && !G.paused && !touchMode && mouseSeen && G.play !== 'type';
   document.body.classList.toggle('aiming', on);
   const r = $('reticle'); r.classList.toggle('on', on);
   if (!on) return;
@@ -571,6 +594,7 @@ function startWave(){
   if (G.waveNum % d.heartEvery === 0 && G.hearts < MAX_HEARTS && !pickups.some(p => p.type === 'heart')) spawnPickup('heart');
   updateHUD();
   showBanner(`${T('wave')} ${G.waveNum}`, 'info');
+  focusTypebox();
 }
 function spawnBot(wordIdx, correct){
   let x = 0, z = 0;
@@ -589,6 +613,43 @@ function spawnBot(wordIdx, correct){
 function removeBot(bot){ scene.remove(bot.ch.group); disposeObj(bot.ch.group); bots.splice(bots.indexOf(bot),1); }
 function hintOf(ans){ return ans.startsWith('to ') ? 'to ' + ans[3] + '…' : ans[0] + '…'; }
 
+// ---------- typing mode: lenient answer matching ----------
+const ART = /^(?:der|die|das|el|la|los|las|the|to|sich)\s+/;
+const normAns = s => String(s).toLowerCase().replace(/\([^)]*\)/g,' ').replace(/ß/g,'ss')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^\p{L}\p{N}\s'-]/gu,' ').replace(/\s+/g,' ').trim();
+function answerForms(ans){
+  const base = String(ans).toLowerCase().replace(/\([^)]*\)/g,' ').replace(/,\s*-[^,\/;]*/g,'');
+  const out = new Set();
+  for (const alt of base.split(/\s*[\/;,]\s*/)){
+    if (!alt.trim()) continue;
+    for (const v of [alt, alt.replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue')]){
+      const n = normAns(v); if (!n) continue; out.add(n); out.add(n.replace(ART,''));
+    }
+  }
+  return out;
+}
+function matchesAnswer(typed, ans){
+  const t = normAns(typed); if (!t) return false;
+  const f = answerForms(ans); return f.has(t) || f.has(t.replace(ART,''));
+}
+function shakeTypebox(){ const tb = $('typebox'); tb.classList.remove('shake'); void tb.offsetWidth; tb.classList.add('shake'); tb.select(); }
+function submitTyped(){
+  const tb = $('typebox'), v = tb.value;
+  if (!G.running || G.paused || G.state !== 'wave' || !v.trim()) return;
+  const ans = VOCAB()[G.current][MODES()[G.mode].answer];
+  if (matchesAnswer(v, ans)){
+    tb.value = '';
+    const cb = bots.find(b => b.correct && b.state === 'alive');
+    if (cb){ const p = cb.ch.group.position; player.facing = Math.atan2(p.x - player.x, p.z - player.z); hitBot(cb, player.x, player.z); }
+    return;
+  }
+  const wrongBot = bots.find(b => !b.correct && b.state === 'alive' && matchesAnswer(v, b.text));
+  if (wrongBot){ hitBot(wrongBot, player.x, player.z); shakeTypebox(); return; }
+  // soft typo: no heart lost
+  G.combo = 1; showBanner(T('typo'), 'bad'); SFX.wrong(); shakeTypebox(); updateHUD();
+}
+
 function hitBot(bot, bx, bz){
   const w = VOCAB()[G.current], mode = MODES()[G.mode];
   const p = bot.ch.group.position;
@@ -604,25 +665,30 @@ function hitBot(bot, bx, bz){
     G.state = 'transition'; G.timer = 1.5;
     setTimeout(() => SFX.poof(), 300);
   } else {
-    G.wrongCount++; G.wrongInWave++; G.combo = 1;
-    G.stats[G.current] = (G.stats[G.current]||0) + 1;
-    if (!G.requeued){ G.requeued = true; G.queue.splice(Math.min(3, G.queue.length), 0, G.current); }
     bot.stun = 1.0; bot.speed *= 1.25;
     const dx = p.x - bx, dz = p.z - bz, l = Math.hypot(dx,dz)||1;
     bot.vx = dx/l*9; bot.vz = dz/l*9;
     addFloater('✗', p.x, 3, p.z, '#ff595e');
     spawnPuff(p.x, 1.5, p.z, 0xff595e, 8);
-    const ans = w[mode.answer];
-    if (G.wrongInWave >= 2){
-      const cb = bots.find(b => b.correct);
-      if (cb){ cb.sign.material.map.dispose(); cb.sign.material.map = makeSignTexture(cb.text, '#b7f5c2', '#16a34a'); cb.sign.material.needsUpdate = true; }
-      showBanner(T('wrong2'), 'bad');
-    } else {
-      showBanner(`${T('wrong')} <span style="color:#ffd93d">${esc(hintOf(ans))}</span>`, 'bad');
-    }
-    SFX.wrong(); G.shake = 0.3;
-    loseHeart();
+    registerMiss();
   }
+  updateHUD();
+}
+function registerMiss(){
+  const w = VOCAB()[G.current], mode = MODES()[G.mode];
+  G.wrongCount++; G.wrongInWave++; G.combo = 1;
+  G.stats[G.current] = (G.stats[G.current]||0) + 1;
+  if (!G.requeued){ G.requeued = true; G.queue.splice(Math.min(3, G.queue.length), 0, G.current); }
+  const ans = w[mode.answer];
+  if (G.wrongInWave >= 2){
+    const cb = bots.find(b => b.correct);
+    if (cb){ cb.sign.material.map.dispose(); cb.sign.material.map = makeSignTexture(cb.text, '#b7f5c2', '#16a34a'); cb.sign.material.needsUpdate = true; }
+    showBanner(T(G.play === 'type' ? 'wrong2Type' : 'wrong2'), 'bad');
+  } else {
+    showBanner(`${T('wrong')} <span style="color:#ffd93d">${esc(hintOf(ans))}</span>`, 'bad');
+  }
+  SFX.wrong(); G.shake = 0.3;
+  loseHeart();
   updateHUD();
 }
 function loseHeart(){
@@ -829,6 +895,8 @@ function update(dt){
   const len = Math.hypot(ix,iz); if (len > 0){ ix /= len; iz /= len; }
 
   player.dashCd -= dt; player.dashT -= dt; player.inv -= dt; player.fireCd -= dt;
+  const typing = G.play === 'type';
+  if (typing){ firing = false; wantDash = false; }
   if (wantDash && player.dashCd <= 0 && len > 0){
     player.dashT = 0.18; player.dashCd = 1.1; player.dashDx = ix; player.dashDz = iz; SFX.dash();
     spawnPuff(player.x, 0.5, player.z, 0xffffff, 8);
@@ -840,7 +908,7 @@ function update(dt){
   const k = Math.pow(0.02, dt); player.vx *= k; player.vz *= k;
   player.x = clamp(player.x, -A+1, A-1); player.z = clamp(player.z, -A+1, A-1);
 
-  if (mouseSeen) updateAim(); else if (len > 0) player.facing = Math.atan2(ix, iz);
+  if (mouseSeen && !typing) updateAim(); else if (len > 0) player.facing = Math.atan2(ix, iz);
   const pg = player.ch.group;
   pg.position.set(player.x, 0, player.z); pg.rotation.y = player.facing;
   animateChar(player.ch, G.time*11, len > 0 ? 1 : 0, true);
@@ -854,7 +922,8 @@ function update(dt){
 }
 function updateCamera(dt){
   let lx = player.x, lz = player.z;
-  if (mouseSeen && G.running){ lx += clamp((aimPoint.x-player.x)*0.25, -5, 5); lz += clamp((aimPoint.z-player.z)*0.25, -5, 5); }
+  if (mouseSeen && G.running && G.play !== 'type'){ lx += clamp((aimPoint.x-player.x)*0.25, -5, 5); lz += clamp((aimPoint.z-player.z)*0.25, -5, 5); }
+  if (G.play === 'type' && kbdPx > 0) lz += 6 * Math.min(1, kbdPx / innerHeight * 2);   // keep the arena above the on-screen keyboard
   const target = new THREE.Vector3(lx, CAM_H, lz + CAM_D);
   camPos.lerp(target, 1 - Math.pow(0.002, dt));
   G.shake = Math.max(0, G.shake - dt*1.6);
@@ -871,13 +940,13 @@ function updateHUD(){
   $('hearts').innerHTML = h;
   $('score').textContent = G.score;
   $('combo').textContent = G.combo > 1 ? `x${G.combo} COMBO!` : '';
-  $('find').textContent = T('find');
+  $('find').textContent = T(G.play === 'type' ? 'typeFind' : 'find');
   $('wave').textContent = `${T('wave')} ${G.waveNum}  ·  ${G.queue.length + (G.state==='wave'?1:0)} ${T('words')} ${T('left')}`;
   const total = G.correctCount + G.queue.length + (G.state==='wave'?1:0);
   $('barfill').style.width = (total ? G.correctCount/total*100 : 0) + '%';
-  $('chint').textContent = touchMode ? '' : T('chint');
+  $('chint').textContent = touchMode ? '' : T(G.play === 'type' ? 'chintType' : 'chint');
 }
-function bestKey(){ return `wordblaster_best_${curSet().id}_${G.mode}_${G.diff}`; }
+function bestKey(){ return `wordblaster_best_${curSet().id}_${G.mode}_${G.diff}${G.play==='type'?'_type':''}`; }
 function getBest(){ try { return +localStorage.getItem(bestKey()) || 0; } catch(e){ return 0; } }
 function setBest(v){ try { localStorage.setItem(bestKey(), v); } catch(e){} }
 
@@ -896,10 +965,16 @@ function startGame(){
   Object.assign(player, { x:0, z:0, vx:0, vz:0, inv:0, dashT:0, dashCd:0, fireCd:0 });
   camPos.set(0,CAM_H,CAM_D);
   $('start').hidden = true; $('over').hidden = true; $('pause').hidden = true; $('hud').hidden = false;
+  const tb = $('typebox');
+  tb.hidden = G.play !== 'type'; tb.value = ''; tb.placeholder = T('placeholder'); tb.lang = curSet().langs[MODES()[G.mode].answer];
+  document.body.classList.toggle('typing', G.play === 'type');
   startWave();
+  focusTypebox();
 }
+function focusTypebox(){ if (G.play === 'type' && G.running && !G.paused) $('typebox').focus({preventScroll:true}); }
 function endGame(won){
   G.running = false; G.state = 'idle';
+  $('typebox').blur();
   bots.forEach(b => b.state = 'dying');
   const best = Math.max(getBest(), G.score); setBest(best);
   $('over-title').textContent = won ? T('victory') : T('gameover');
@@ -917,14 +992,24 @@ function endGame(won){
 function togglePause(){
   if (!G.running) return;
   G.paused = !G.paused; $('pause').hidden = !G.paused;
+  if (!G.paused && !touchMode) focusTypebox();
 }
 
 // ---------- start screen ----------
 function applyLang(){
-  document.querySelectorAll('[data-t]').forEach(el => { const k = el.dataset.t; el.innerHTML = T(touchMode && UI.en[k + 'Touch'] ? k + 'Touch' : k); });
+  const tkey = k => {
+    const cands = [];
+    if (G.play === 'type' && touchMode) cands.push(k + 'TypeTouch');
+    if (G.play === 'type') cands.push(k + 'Type');
+    if (touchMode) cands.push(k + 'Touch');
+    return cands.find(c => UI.en[c] !== undefined) || k;
+  };
+  document.querySelectorAll('[data-t]').forEach(el => { el.innerHTML = T(tkey(el.dataset.t)); });
   $('touchui').classList.toggle('on', touchMode);
+  document.body.classList.toggle('typing', G.play === 'type');
   $('sets').innerHTML = SETS.map((s,i) => `<button class="btn ${i===curSetIdx?'sel':''}" data-set="${i}">${esc(s.name[uiLang] || s.name.en)}</button>`).join('');
   $('modes').innerHTML = MODES().map((m,i) => `<button class="btn ${i===G.mode?'sel':''}" data-mode="${i}">${esc(modeLabel(m))}</button>`).join('');
+  $('plays').innerHTML = T('plays').map((m,i) => { const v = i ? 'type' : 'shoot'; return `<button class="btn ${v===G.play?'sel':''}" data-play="${v}">${m}</button>`; }).join('');
   $('diffs').innerHTML = T('diffs').map((m,i) => `<button class="btn ${i===G.diff?'sel':''}" data-diff="${i}">${m}</button>`).join('');
   $('langs').innerHTML = ['es','de','en'].map(l => `<button class="btn ${l===uiLang?'sel':''}" data-lang="${l}">${l.toUpperCase()}</button>`).join('');
   document.documentElement.lang = uiLang;
@@ -935,6 +1020,7 @@ $('start').addEventListener('click', e => {
   if (b.dataset.set !== undefined){ curSetIdx = +b.dataset.set; G.mode = 0; try { localStorage.setItem('wordblaster_set', curSet().id); } catch(e){} applyLang(); }
   else if (b.dataset.mode !== undefined){ G.mode = +b.dataset.mode; applyLang(); }
   else if (b.dataset.diff !== undefined){ G.diff = +b.dataset.diff; applyLang(); }
+  else if (b.dataset.play){ G.play = b.dataset.play; try { localStorage.setItem('wordblaster_play', G.play); } catch(e){} applyLang(); }
   else if (b.dataset.lang){ uiLang = b.dataset.lang; try { localStorage.setItem('wordblaster_lang', uiLang); } catch(e){} applyLang(); }
   else if (b.id === 'play'){ startGame(); }
 });
@@ -942,10 +1028,20 @@ $('again').addEventListener('click', () => { initAudio(); startGame(); });
 $('menu').addEventListener('click', () => { $('over').hidden = true; $('start').hidden = false; });
 try { const l = localStorage.getItem('wordblaster_lang'); if (l && UI[l]) uiLang = l; } catch(e){}
 try { const i = SETS.findIndex(s => s.id === localStorage.getItem('wordblaster_set')); if (i >= 0) curSetIdx = i; } catch(e){}
+try { const p = localStorage.getItem('wordblaster_play'); if (p === 'type' || p === 'shoot') G.play = p; } catch(e){}
 applyLang();
 
 // ---------- input ----------
+const typebox = $('typebox');
+const ARROWS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
 window.addEventListener('keydown', e => {
+  if (e.target === typebox){
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Escape'){ e.preventDefault(); togglePause(); return; }
+    if (e.key === 'Enter'){ e.preventDefault(); submitTyped(); return; }
+    if (ARROWS.includes(e.code)){ e.preventDefault(); if (!e.repeat) keys.add(e.code); }
+    return;                                   // letters, Space, Shift, P, M go to the input
+  }
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
   keys.add(e.code);
@@ -957,7 +1053,8 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Space') firing = false; });
 window.addEventListener('blur', () => { keys.clear(); firing = false; });
 window.addEventListener('mousemove', e => { mouseSeen = true; mouseNDC.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1); mousePx.x = e.clientX; mousePx.y = e.clientY; });
-canvas.addEventListener('mousedown', e => { if (e.button === 0){ firing = true; initAudio(); } });
+canvas.addEventListener('mousedown', e => { if (G.play === 'type'){ e.preventDefault(); initAudio(); return; } if (e.button === 0){ firing = true; initAudio(); } });
+typebox.addEventListener('blur', () => { if (G.running && G.play === 'type' && !G.paused && !touchMode) setTimeout(focusTypebox, 0); });
 window.addEventListener('mouseup', () => { firing = false; });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -973,7 +1070,7 @@ canvas.addEventListener('touchstart', e => {
       joy.id = t.identifier; joy.ox = t.clientX; joy.oy = t.clientY; joy.x = joy.y = 0;
       const j = $('joy'); j.style.display = 'block'; j.style.left = joy.ox + 'px'; j.style.top = joy.oy + 'px';
       $('knob').style.transform = 'translate(-50%,-50%)';
-    } else if (fireTouchId === null){
+    } else if (fireTouchId === null && G.play !== 'type'){
       fireTouchId = t.identifier; setAim(t.clientX, t.clientY); firing = true;
     }
   }
@@ -1000,12 +1097,21 @@ $('dashBtn').addEventListener('touchstart', e => { e.preventDefault(); wantDash 
 $('dashBtn').addEventListener('mousedown', e => { e.preventDefault(); wantDash = true; });
 $('pauseBtn').addEventListener('touchstart', e => { e.preventDefault(); togglePause(); }, {passive:false});
 $('pauseBtn').addEventListener('mousedown', e => { e.preventDefault(); togglePause(); });
+$('pause').addEventListener('mousedown', e => e.preventDefault());
 $('pause').addEventListener('click', () => { if (G.paused) togglePause(); });
 $('start').addEventListener('touchstart', () => setTouchMode(true), {passive:true});
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) togglePause(); });
 
 function resize(){ renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); }
 window.addEventListener('resize', resize); resize();
+let kbdPx = 0;
+const vv = window.visualViewport;
+function onVV(){
+  kbdPx = Math.max(0, innerHeight - vv.height - vv.offsetTop);
+  document.documentElement.style.setProperty('--kbd', kbdPx + 'px');
+  if (kbdPx > 0) window.scrollTo(0, 0);
+}
+if (vv){ vv.addEventListener('resize', onVV); vv.addEventListener('scroll', onVV); }
 
 // ---------- main loop ----------
 let last = performance.now();
@@ -1018,7 +1124,7 @@ function loop(now){
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
-window.WB = { G, SETS, curSet, bots, player, camera, hitBot, startWave, spawnPickup, endGame };   // debug hook
+window.WB = { G, SETS, curSet, bots, player, camera, hitBot, startWave, spawnPickup, endGame, matchesAnswer, answerForms, registerMiss, submitTyped };   // debug hook
 })();
 </script>
 </body>
