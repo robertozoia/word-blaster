@@ -570,7 +570,7 @@ const G = { running:false, paused:false, mode:0, diff:1, play:'shoot', hearts:MA
             state:'idle', timer:0, coinTimer:6, shake:0, time:0 };
 const bots = [], bullets = [], particles = [], pickups = [], floaters = [];
 const keys = new Set();
-let firing = false, wantDash = false, mouseSeen = false;
+let firing = false, tapShot = false, wantDash = false, mouseSeen = false;
 const mouseNDC = new THREE.Vector2();
 const mousePx = { x:-100, y:-100 };
 const _rp = new THREE.Vector3();
@@ -906,6 +906,31 @@ function updateAim(){
     if (dx*dx + dz*dz > 0.05) player.facing = Math.atan2(dx, dz);
   }
 }
+// Touch aim: lock onto the noob whose sign or body is under the finger, else a fixed ground point.
+// (Raycasting the screen point misses: signs float above the noobs and the camera drifts while aiming.)
+const touchAim = { bot:null, x:0, z:0 };
+const toPx = v => { v.x = (v.x*0.5+0.5)*innerWidth; v.y = (-v.y*0.5+0.5)*innerHeight; return v; };
+function pickBotAt(cx, cy){
+  let best = null, bestD = 1;
+  for (const bot of bots){
+    if (bot.state !== 'alive') continue;
+    const p = bot.ch.group.position, sy = bot.sign.position.y;
+    toPx(_pc.set(p.x, sy, p.z).project(camera)); toPx(_pe.set(p.x + 2.6*SIGN_S, sy, p.z).project(camera));
+    const hw = Math.abs(_pe.x - _pc.x);
+    let d = Math.max(Math.abs(cx-_pc.x)/(hw+12), Math.abs(cy-_pc.y)/(hw*SIGN_RATIO+12));   // < 1: on the sign
+    toPx(_rp.set(p.x, 1.5, p.z).project(camera));
+    d = Math.min(d, Math.hypot(cx-_rp.x, cy-_rp.y) / Math.max(36, hw*0.5));               // < 1: on the body
+    if (d < bestD){ best = bot; bestD = d; }
+  }
+  return best;
+}
+function aimTouch(){
+  const b = touchAim.bot;
+  if (b && b.state === 'alive'){ touchAim.x = b.ch.group.position.x; touchAim.z = b.ch.group.position.z; }
+  aimPoint.set(touchAim.x, 1.2, touchAim.z);
+  const dx = aimPoint.x - player.x, dz = aimPoint.z - player.z;
+  if (dx*dx + dz*dz > 0.05) player.facing = Math.atan2(dx, dz);
+}
 function update(dt){
   G.time += dt;
   let ix = 0, iz = 0;
@@ -930,13 +955,13 @@ function update(dt){
   const k = Math.pow(0.02, dt); player.vx *= k; player.vz *= k;
   player.x = clamp(player.x, -A+1, A-1); player.z = clamp(player.z, -A+1, A-1);
 
-  if (mouseSeen && !typing) updateAim(); else if (len > 0) player.facing = Math.atan2(ix, iz);
+  if (mouseSeen && !typing) (touchMode ? aimTouch : updateAim)(); else if (len > 0) player.facing = Math.atan2(ix, iz);
   const pg = player.ch.group;
   pg.position.set(player.x, 0, player.z); pg.rotation.y = player.facing;
   animateChar(player.ch, G.time*11, len > 0 ? 1 : 0, true);
   pg.visible = player.inv > 0 ? (Math.floor(G.time*12) % 2 === 0) : true;
 
-  if (firing && player.fireCd <= 0){ fire(); player.fireCd = 0.26; }
+  if ((firing || tapShot) && player.fireCd <= 0){ fire(); player.fireCd = 0.26; tapShot = false; }
 
   updateBots(dt); updateBullets(dt); updateParticles(dt); updatePickups(dt); updateSignLayout(dt);
 
@@ -1084,16 +1109,24 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 const joy = { id:null, ox:0, oy:0, x:0, y:0 };
 let fireTouchId = null;
 function setTouchMode(on){ if (touchMode === on) return; touchMode = on; applyLang(); updateHUD(); }
-function setAim(cx, cy){ mouseSeen = true; mouseNDC.set((cx/innerWidth)*2-1, -(cy/innerHeight)*2+1); }
+function setAim(cx, cy){
+  mouseSeen = true;
+  touchAim.bot = pickBotAt(cx, cy);
+  if (!touchAim.bot){
+    raycaster.setFromCamera(mouseNDC.set((cx/innerWidth)*2-1, -(cy/innerHeight)*2+1), camera);
+    if (raycaster.ray.intersectPlane(aimPlane, _pc)){ touchAim.x = _pc.x; touchAim.z = _pc.z; }
+  }
+}
 canvas.addEventListener('touchstart', e => {
   e.preventDefault(); initAudio(); setTouchMode(true);
   for (const t of e.changedTouches){
-    if (t.clientX < innerWidth/2 && joy.id === null){
+    const canFire = fireTouchId === null && G.play !== 'type';
+    if (t.clientX < innerWidth/2 && joy.id === null && !(canFire && pickBotAt(t.clientX, t.clientY))){   // tapping a noob on the left shoots it
       joy.id = t.identifier; joy.ox = t.clientX; joy.oy = t.clientY; joy.x = joy.y = 0;
       const j = $('joy'); j.style.display = 'block'; j.style.left = joy.ox + 'px'; j.style.top = joy.oy + 'px';
       $('knob').style.transform = 'translate(-50%,-50%)';
-    } else if (fireTouchId === null && G.play !== 'type'){
-      fireTouchId = t.identifier; setAim(t.clientX, t.clientY); firing = true;
+    } else if (canFire){
+      fireTouchId = t.identifier; setAim(t.clientX, t.clientY); firing = true; tapShot = true;   // a quick tap still fires once
     }
   }
 }, {passive:false});
