@@ -91,6 +91,26 @@ body.typing #dashBtn{display:none}
 #pauseBtn{right:16px;top:92px;width:54px;height:54px;font-size:20px}
 #fireHint{position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.55;text-align:right;line-height:1.4}
 @media (max-width:600px){h1{font-size:42px}#pmain{font-size:28px}#hearts{font-size:22px}#score{font-size:24px}}
+/* phones: compact, see-through HUD so it covers less of the arena */
+@media (max-height:500px),(max-width:500px){
+  #hud .box{padding:3px 10px;border-width:2px;border-radius:12px;box-shadow:none}
+  #hearts{left:max(8px,env(safe-area-inset-left));top:8px;font-size:20px}
+  #topright{right:max(8px,env(safe-area-inset-right));top:8px}
+  #score{font-size:22px}
+  #combo{font-size:12px;min-height:0}
+  #prompt{top:6px;min-width:0;max-width:min(60vw,520px);background:rgba(29,53,87,.4);border-color:rgba(255,255,255,.55);padding:2px 12px 3px}
+  #find{font-size:10px;letter-spacing:1px}
+  #pmain{font-size:24px;line-height:1.05;text-shadow:2px 2px 0 #000,-1px -1px 0 #1d3557,1px -1px 0 #1d3557,-1px 1px 0 #1d3557}
+  #psub{font-size:14px;line-height:1.1;text-shadow:1px 1px 0 #1d3557,-1px -1px 0 #1d3557,1px -1px 0 #1d3557,-1px 1px 0 #1d3557}
+  #typebox{font-size:16px;padding:4px 10px;margin:4px auto 2px;width:min(56vw,300px);border-width:2px}
+  #bottom{bottom:calc(8px + var(--kbd,0px));width:min(60vw,420px)}
+  #wave{font-size:12px;margin-bottom:3px}
+  #bar{height:9px}
+  #banner{font-size:26px}
+  #pauseBtn{right:max(8px,env(safe-area-inset-right));top:56px;width:46px;height:46px;font-size:16px}
+  #dashBtn{right:max(20px,env(safe-area-inset-right));width:80px;height:80px;bottom:calc(36px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-height:500px){#find{display:none}#prompt{padding-top:3px}}
 </style>
 </head>
 <body>
@@ -420,7 +440,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x7ec8ff);
 scene.fog = new THREE.Fog(0x7ec8ff, 70, 150);
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 400);
-const CAM_H = 26, CAM_D = 17;
+let CAM_H = 26, CAM_D = 17;                     // set in resize(): closer on small screens
 const camPos = new THREE.Vector3(0, CAM_H, CAM_D);
 camera.position.copy(camPos);
 
@@ -517,6 +537,7 @@ function disposeObj(o){ o.traverse(n => { if (n.geometry) n.geometry.dispose(); 
 
 // ---------- word signs (canvas sprites) ----------
 const SIGN_COLORS = ['#ffd93d','#6bcbff','#ff8fab','#9dff8f','#ffb35c','#c79bff','#ffffff'];
+let SIGN_S = 1;                                 // sign size multiplier, set in resize(): bigger on phones
 function makeSignTexture(text, bg, border){
   const c = document.createElement('canvas'); c.width = 512; c.height = 160;
   const g = c.getContext('2d');
@@ -532,7 +553,7 @@ function makeSignTexture(text, bg, border){
 }
 function makeSign(text, bg){
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:makeSignTexture(text,bg,'#1d3557'), transparent:true, depthTest:false}));
-  sp.scale.set(5.2, 1.625, 1); sp.position.y = 3.8; sp.renderOrder = 10;
+  sp.scale.set(5.2*SIGN_S, 1.625*SIGN_S, 1); sp.position.y = signY(); sp.renderOrder = 10;
   return sp;
 }
 
@@ -848,14 +869,15 @@ function updateBots(dt){
   }
 }
 // Lift word signs that overlap on screen so they stay readable when noobs bunch up.
-const SIGN_Y = 3.8, SIGN_HW = 2.6, SIGN_RATIO = 1.625/5.2;
+const SIGN_RATIO = 1.625/5.2;
+function signY(){ return 2.99 + 0.8125*SIGN_S; }  // bottom edge just above the head
 const _pc = new THREE.Vector3(), _pe = new THREE.Vector3();
 function updateSignLayout(dt){
-  const rects = [];
+  const rects = [], baseY = signY(), signHW = 2.6*SIGN_S;
   for (const bot of bots){
     if (bot.state !== 'alive') continue;
-    const p = bot.ch.group.position, sy = SIGN_Y + bot.lift;
-    _pc.set(p.x, sy, p.z).project(camera); _pe.set(p.x + SIGN_HW, sy, p.z).project(camera);
+    const p = bot.ch.group.position, sy = baseY + bot.lift;
+    _pc.set(p.x, sy, p.z).project(camera); _pe.set(p.x + signHW, sy, p.z).project(camera);
     const hw = Math.abs(_pe.x - _pc.x) * innerWidth / 2;
     rects.push({ bot, x:_pc.x*innerWidth/2, y:-_pc.y*innerHeight/2, hw, hh:hw*SIGN_RATIO, need:false, tight:false });
   }
@@ -872,8 +894,8 @@ function updateSignLayout(dt){
     else if (!r.tight) r.bot.lift = Math.max(0, r.bot.lift - 3*dt);
   }
   for (const bot of bots){
-    const y = SIGN_Y + bot.lift; bot.sign.position.y = y;
-    const L = y - 0.85 - 2.9;
+    const y = baseY + bot.lift; bot.sign.position.y = y;
+    const L = y - 0.85*SIGN_S - 2.9;
     bot.pole.visible = L > 0.2; bot.pole.scale.y = Math.max(0.01, L); bot.pole.position.y = 2.9 + L/2;
   }
 }
@@ -1102,7 +1124,17 @@ $('pause').addEventListener('click', () => { if (G.paused) togglePause(); });
 $('start').addEventListener('touchstart', () => setTouchMode(true), {passive:true});
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) togglePause(); });
 
-function resize(){ renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); }
+function resize(){
+  renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  // Phones: zoom in and enlarge the signs so noobs and words stay readable.
+  // The short side of the screen spans 2*half world units (desktop ≈ 32, phone 22).
+  const t = clamp((Math.min(innerWidth, innerHeight) - 420) / 380, 0, 1);   // 0 = phone, 1 = desktop
+  const half = 11 + 5.2*t, tanF = Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+  const dist = (innerWidth < innerHeight ? half / (tanF*camera.aspect) : half / tanF) / Math.hypot(26, 17);
+  CAM_H = 26*dist; CAM_D = 17*dist;
+  SIGN_S = 1 + 0.35*(1 - t);
+  for (const bot of bots) bot.sign.scale.set(5.2*SIGN_S, 1.625*SIGN_S, 1);
+}
 window.addEventListener('resize', resize); resize();
 let kbdPx = 0;
 const vv = window.visualViewport;
